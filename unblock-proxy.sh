@@ -28,10 +28,11 @@
 
 _PROG=${0##*/}
 _COMMAND_MODE="$1"
-_REGEX="(-v|-h|-R|-C|--help|--version|--reset|--proxycheck)"
+_REGEX="(-v|-h|-R|-C|--help|--version|--reset|--proxycheck|--tunnelmode)"
 _MMTP=${1%%-*} #left of "-" must be _c_m
 
-_BASE_DIR=/opt/unblock-proxy.sh/
+_BASE_DIR=/etc/unblock-proxy/
+#_BASE_DIR=dirname "$(readlink -f "$0")"
 _WEBACP_DIR=${_BASE_DIR}web-acp
 _CONF_R=${_BASE_D%un*} #/opt/
 
@@ -49,8 +50,11 @@ _PROXY_FILE=${_BASE_DIR}proxies.lst
 _PIP=0
 _PPORT=0
 _PPROTO=0
+_PUSER=0
+_PPASS=0
 _SSH_SOCKS=0
 _RUN_WEB=0
+_TUNNEL_MODE=0
 
 OIF=enp0s3
 IIF=enp0s3
@@ -77,12 +81,14 @@ _usage()
     
     -i, --in-if=            Sets the in-interface Device.
     -o, --out-if=           Sets the out-interface Device.
+    --ip-address=           Sets the IP-Address manually.
     -S, --ssh-socks         Set own Server as Parent Socks-Proxy over SSH-tunnel.
                             (Can't be use with tor-Engine!)
     -W, --web-admin         Starts a small Webserver-Backend at Port 8383
                             (Requires php framework >=5.4!)
     -R, --reset             Resets all the IPTABLES and MASQ Entries.
     -C, --proxycheck        Just scans/checks the Proxies in ($_PROXY_FILE).
+    --tunnelmode            Tunnel all the traffic through proxy. (Works only with DNS Smart-Proxy)
     
     -d, --debug             Show debug-verbose messages into the system log.
     -v, --version           Prints script-version.
@@ -259,7 +265,9 @@ _get_interfaces()
         IIF=$IF_T 
         OIF=$IF_T
         #GET IP ADDRESS
-        IPADDR=$(ip addr show dev $OIF | grep global | awk '{print $2}' | cut -d '/' -f 1 | head -n1)
+        if [[ -z $IPADDR ]]; then
+           IPADDR=$(ip addr show dev $OIF | grep global | awk '{print $2}' | cut -d '/' -f 1 | head -n1)
+        fi
         echo -e "\e[1m\e[94m[*] Setting up iface IN -> ($IIF) and OUT -> ($OIF) <==> ($IPADDR)\e[39m\e[0m"
     else
         echo "[!!] Network_error: No Interface found"
@@ -284,9 +292,15 @@ _get_proxy()
             _PIP=`awk '{print $2}' <<<$PROX`
             _PPORT=`awk '{print $3}' <<<$PROX`
             _PPROTO=`awk '{print $1}' <<<$PROX`
+            _PUSER=`awk '{print $4}' <<<$PROX`
+            _PPASS=`awk '{print $5}' <<<$PROX`
             #$(nc -w 7 -z -v $_PIP $_PPORT 2>&1 | grep open)
             printf "[~ $((_counter=$_counter+1))] Testing Proxy: $_PIP:$_PPORT $_PPROTO"
-            curl -m 32 --connect-timeout 42 -x $_PPROTO://$_PIP:$_PPORT -fsL $_CHKURL >/dev/null 2>&1
+            if [[ -n $_PUSER && -n $_PPASS ]]; then
+               curl -m 32 --connect-timeout 42 -x $_PPROTO://$_PUSER:$_PPASS@$_PIP:$_PPORT -fsL $_CHKURL >/dev/null 2>&1
+            else
+               curl -m 32 --connect-timeout 42 -x $_PPROTO://$_PIP:$_PPORT -fsL $_CHKURL >/dev/null 2>&1
+            fi
             
             if [[ $? == 0 ]]; then
                 printf " \e[32m[seems to work :)]\n[*] FOUND! ($_PIP)\n\e[39m\e[0m"
@@ -402,12 +416,17 @@ _set_transpa()
 _set_smart_dns()
 {
     echo -e "\n\e[1m\e[94m[*] Setup SMART DNS PROXY\e[39m\e[0m"
-    for DOM in $BL_ARRAY; do
-        #alternate and faster if installed: fping -c1 -T400 $DOM
-        [[ -z $(ping -c 1 -i 0.1 -W 0.7 $DOM 2>/dev/null) ]] && echo "!! $DOM seems to be down. Not set"
-        echo "-> Setting up Hostname: $DOM"
-        echo "address=/$DOM/$IPADDR" >> $_DNS_CONF      
-    done
+    if [[ $_TUNNEL_MODE == 0 ]]; then
+        for DOM in $BL_ARRAY; do
+            #alternate and faster if installed: fping -c1 -T400 $DOM
+            [[ -z $(ping -c 1 -i 0.1 -W 0.7 $DOM 2>/dev/null) ]] && echo "!! $DOM seems to be down. Not set"
+            echo "-> Setting up Hostname: $DOM"
+            echo "address=/$DOM/$IPADDR" >> $_DNS_CONF      
+        done
+    else
+        echo "-> Setting up Tunnel"
+        echo "address=/#/$IPADDR" >> $_DNS_CONF      
+    fi
     
     if [[ $_PROX_ENGINE != "proxychains" ]]; then       
         _PCPARA="SDNS" && _run_sniproxy     
@@ -465,9 +484,11 @@ _set_ngin_conf()
                     _get_proxy                                     
                     sed "s/\_SIP\_/$_PIP/g" -i $_REDSOCKS_CONF
                     sed "s/\_SPORT\_/$_PPORT/g" -i $_REDSOCKS_CONF
+                    sed "s/\_SUSER\_/$_PUSER/g" -i $_REDSOCKS_CONF
+                    sed "s/\_SPASS\_/$_PPASS/g" -i $_REDSOCKS_CONF
                     [[ $_PPROTO =~ ^S ]] && _PPROTO=`sed 's/^S/s/g' <<<$_PPROTO`
                     [[ $_PPROTO =~ ^h|^H ]] && _PPROTO="http-connect"
-                    sed "s/\_SPROTO\_/$_PPROTO/g" -i $_REDSOCKS_CONF   
+                    sed "s/\_SPROTO\_/$_PPROTO/g" -i $_REDSOCKS_CONF
                     
                     ## SET TABLES:
                     IJUMP="REDSOCKS"
@@ -555,7 +576,7 @@ if [[ $? != 4 && $? != 1 ]]; then
     exit 13
 fi
 
-_getopt=$(getopt -o tsrpw:i:o:SWRCvhd --long tor,squid,redsocks,proxychains,windscribe::,in-if::,out-if::,ssh-socks,web-admin,reset,proxycheck,version,help,debug -n $_PROG -- "$@")
+_getopt=$(getopt -o tsrpw:i:o:SWRCvhd --long tor,squid,redsocks,proxychains,windscribe::,in-if::,out-if::,ip-address::,ssh-socks,web-admin,reset,proxycheck,tunnelmode,version,help,debug -n $_PROG -- "$@")
 if [[ $? != 0 ]] ; then 
     echo "bad command line options" >&2 ; exit 14 ; 
 fi
@@ -620,6 +641,16 @@ while true; do
                     fi
                     continue 
                     ;;
+            --ip-address)
+                    if [[ -z $2 ]]; then
+                        echo -e "Missing IP\n" ; _usage
+                        exit 15;
+                    else
+                        IPADDR=$2;
+                        shift 2;
+                    fi
+                    continue 
+                    ;;
             -S|--ssh-socks)
                     _SSH_SOCKS=1;
                     shift  
@@ -634,6 +665,10 @@ while true; do
             -C|--proxycheck)
                     _get_proxy 2; 
                     exit 0  
+                    ;;
+            --tunnelmode)
+                    _TUNNEL_MODE=1;
+                    shift  
                     ;;
             -d|--debug)
                     _DEBUG_VERBOSE=1
@@ -663,7 +698,9 @@ else
     [[ -z $OIF ]] && OIF=$IIF 
     [[ -z $IIF ]] && IIF=$OIF
     ## GET IP ADDRESS
-    IPADDR=$(ip addr show dev $OIF | grep global | awk '{print $2}' | cut -d '/' -f 1 | head -n1)
+    if [[ -z $IPADDR ]]; then
+        IPADDR=$(ip addr show dev $OIF | grep global | awk '{print $2}' | cut -d '/' -f 1 | head -n1)
+    fi
     echo -e "\n\e[1m\e[94m[*] Setting up iface IN -> ($IIF) and OUT -> ($OIF) <=> ($IPADDR)\e[39m\e[0m" 
 fi
 

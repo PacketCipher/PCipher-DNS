@@ -1,11 +1,13 @@
 ![Thumb](/img/unblock-version.gif)
+
 ### A "Swiss Army proxy-knife" to avoid geoblocking in Video on Demand and censorship in your whole network!
 
 # Background - Why this script?
+
 There are many devices in my network, which do not allow to set a proxy manually, I have always had to prepare my router or a computer, which was a lot of time and configuration effort.
 
 With this script, I have the possibility to offer a proxy in my whole network for desired domains. Even if DNS or transparent router.
-Furthermore I can choose which proxy engine should be used. 
+Furthermore I can choose which proxy engine should be used.
 
 It couldn't be easier!
 
@@ -21,16 +23,20 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
     Disney Channel Plus
     Fox Now / Sports Go / News / Showtime
     HBO Now
-    
+
     And many, many many more!
 
 #### It's not a VPN! And this will save your bandwidth massively
 
 # Features
+
 #### Main Modes:
+
 - Router (transparent) Mode (This can be use on a OpenWRT Route or something similar)
 - Smart (DNS) Mode (Set this to any device where you can set a DNS Server Setting)
+
 #### Proxy Engines:
+
 - Tor
 - Squid (incl. Certcreator for SSL-Bump Functionality)
 - Redsocks
@@ -40,6 +46,7 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 ![Thumb](/img/unblock-dns-redsocks.gif)
 
 #### Proxyserver Scanner
+
 - Socks4, Socks5
 - HTTP/S
 
@@ -55,9 +62,16 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 
 ## !!!THIS VERSION IS BETA AND ONLY TESTED ON DEBIAN/UBUNTU SYSTEMS! SO PLEASE WRITE AN ISSUE IF YOU HAVE SOME TROUBLE HERE!!!
 
+### Using Docker:
+
+docker run -it --cap-add=NET_ADMIN -p 80 -p 443 -p 53/udp -e UPSTREAM_DNS_SERVER=1.1.1.1 -e PROXY_DETAILS="http 10.20.30.40 8080" fireblackhat/dns-tunnel dns --redsocks --tunnelmode --ip-address="YOUR PUBLIC IP" --debug
+
+### Manually:
+
 ### 1. Clone and install the script (Minimal Requirements)
+
 ```
-sudo apt install iproute2 iptables git sniproxy dnsmasq 
+sudo apt install iproute2 iptables git sniproxy dnsmasq
 # If you wish to use the integrated Web-Server
 # apt install php
 
@@ -66,11 +80,15 @@ chmod +x /opt/unblock-proxy.sh/unblock-proxy.sh && ln -s /opt/unblock-proxy.sh/u
 ```
 
 ### 2. Depends on engine you want to use:
+
 #### - Tor
+
 ```
 sudo apt install tor
 ```
+
 #### - Squid
+
 ```
 VER=4.13
 sudo apt install build-essential openssl libssl-dev pkg-config privoxy
@@ -87,111 +105,131 @@ chown proxy:proxy -R /usr/local/squid/
 # Initial crt database (For problems use 10M or more)
 /usr/local/squid/libexec/security_file_certgen -c -s /usr/local/squid/var/cache/squid/ssl_db -M 4MB
 ```
+
 #### - redsocks
+
 ```
 sudo apt install redsocks
 ```
-  ###### Or Compiling...
+
+###### Or Compiling...
+
 ```
 sudo apt install libevent-dev build-essential
 git clone https://github.com/darkk/redsocks ~/redsocks
-cd ~/redsocks && make 
-sudo ln -s ~/redsocks/redsocks /usr/bin/ 
+cd ~/redsocks && make
+sudo ln -s ~/redsocks/redsocks /usr/bin/
 ```
+
 #### - proxychains
+
 ```
 sudo apt install proxychains
 ```
+
 #### - windscribe
+
 To install this amazing VPN you need to create an account and follow these instructions here: https://windscribe.com/guides/linux#how-to
 
 or
+
 ```
 sudo wget https://windscribe.com/install/desktop/linux_deb_x64 -O /tmp/ws.deb
 sudo apt install --no-install-recommends /tmp/ws.deb
 ```
 
-### 3. Put your wished Proxy in the proxies.lst file. 
+### 3. Put your wished Proxy in the proxies.lst file.
+
 #### (Please google for free proxy Server)
 
-### 4. Put your wished Domain in the domains.lst file. 
+### 4. Put your wished Domain in the domains.lst file.
+
 #### (There're already a few useful ones inside)
 
-### 5. Run the unblock-proxy.sh (See examples below) and Have fun! 
+### 5. Run the unblock-proxy.sh (See examples below) and Have fun!
 
+# Options
 
-# Options 
 ```
-Usage: unblock-proxy.sh main-mode proxy-engine [options]>   
-  
-  main-mode:  
-	       
-	transparent             Activates the transparent routing-gw. 
-	dns                     Activates the DNS Smart-Proxy.    
-	                    
-  proxy engines:  
-	
+Usage: unblock-proxy.sh main-mode proxy-engine [options]>
+
+  main-mode:
+
+	transparent             Activates the transparent routing-gw.
+	dns                     Activates the DNS Smart-Proxy.
+
+  proxy engines:
+
 	-t, --tor               Activates the TOR Engine.
 	-s, --squid             Activates the Squid Engine.
 	-r, --redsocks          Activates the RedSocks Engine.
 	-p, --proxychains       Activates the proxychains Engine.
 	-w, --windscribe=       Activates the windscribe Engine.
                                 (Optional set Country: --windscribe=US or -w US or without arguments!)
-	
+
   options:
-	
+
 	-i, --in-if=            Sets the in-interface Device.
 	-o, --out-if=           Sets the out-interface Device.
-	-S, --ssh-socks         Set own Server as Parent Socks-Proxy over SSH-tunnel. 
+	-S, --ssh-socks         Set own Server as Parent Socks-Proxy over SSH-tunnel.
                                 (Can't be use with tor-Engine!)
 	-w, --web-admin         Starts a small Webserver-Backend at Port 8383
                                 (Requires php framework >=5.4!)
 	-R, --reset             Resets all the IPTABLES and MASQ Entries.
 	-C, --proxycheck        Just scans/checks the Proxies in (/opt/unblock-proxy/proxies.lst).
-	
+
 	-d, --debug             Show debug-verbose messages into the system log.
 	-v, --version           Prints script-version.
 	-h, --help              Print this help message.
-  
+
 ```
 
 # Examples
+
 #### Using Transparent Router-Mode with Tor Engine
+
 ```bash
 unblock-proxy.sh transparent --tor
 ```
 
 #### Using Transparent Router-Mode with Redsocks Engine and pull off Debug-infos
+
 ```
 unblock-proxy.sh transparent --redsocks --debug
 ```
 
 #### Using Transparent Router-Mode with Redsocks Engine and pull off Debug-infos (Same but: Short Parameters)
+
 ```
 unblock-proxy.sh transparent -r -d
 ```
 
 #### Using Smart DNS Mode with squid Engine and pull off Debug-infos. Also start the Web-Backend Server
+
 ```
 unblock-proxy.sh dns --squid --debug --web-admin
 ```
 
 #### Using Smart DNS Mode with squid Engine, Using SSH-Socks Proxy and pull off Debug-infos
+
 ```
 unblock-proxy.sh dns -s --ssh-socks --debug
 ```
 
 #### Using Smart DNS Mode with windscribe Engine /w Thailand-IP and pull off Debug-infos
+
 ```
 unblock-proxy.sh dns --windscribe=TH --debug
 ```
 
 #### Using Smart DNS Mode with proxychains Engine, using specific Network-Card and pull off Debug-infos
+
 ```
 unblock-proxy.sh dns --proxychains --in-if=eth2 -o wlan0 -d
 ```
 
 #### Resetting and Check your Proxylist
+
 ```
 unblock-proxy.sh -R
 
@@ -199,18 +237,19 @@ unblock-proxy.sh -C
 ```
 
 # Report Bugs!
+
 This Version is a pure beta version!
 When you find bugs, please let me know.
 
 Thanks.
 
 # -
-	This program is free software; you can redistribute it and/or modify it under
-	the terms of the GNU General Public License as published by the Free Software
-	Foundation
 
-	This program is distributed in the hope that it will be useful, but WITHOUT
-	ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-	FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
-	details.
+    This program is free software; you can redistribute it and/or modify it under
+    the terms of the GNU General Public License as published by the Free Software
+    Foundation
 
+    This program is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
+    FOR A PARTICULAR PURPOSE. See the GNU General Public License for more
+    details.
