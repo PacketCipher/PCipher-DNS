@@ -1,8 +1,8 @@
 ### Build Stage
-FROM golang:1.18-alpine AS build-env
+FROM golang:1.18-bullseye AS build-env
 
 WORKDIR /
-RUN apk --no-cache add git && \
+RUN apt-get update && apt-get install --yes git && \
     git clone https://github.com/cybozu-go/transocks.git src && \
     cd /src && go get github.com/cybozu-go/transocks/cmd/transocks && \
     go build -o transocks ./cmd/transocks

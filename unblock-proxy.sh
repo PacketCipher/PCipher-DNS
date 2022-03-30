@@ -176,7 +176,7 @@ _run_transocks()
     BIN_CHK=$(command -v transocks)
       
     if [[ $BIN_CHK ]]; then
-        $BIN_CHK -f $_TRANSOCKS_CONF
+        $BIN_CHK -f $_TRANSOCKS_CONF &
     else
         echo "[!!] Command $BIN_CHK not found!"
         echo "Try to search/install like: apt-get install $BIN_CHK"
@@ -523,11 +523,11 @@ _set_ngin_conf()
             transocks)  
                     _get_proxy
                     if [[ -n $_PUSER && -n $_PPASS ]]; then
-                        _CONCAT_PROXY="$_PPROTO://$_PUSER:$_PPASS@$_PIP:$_PPORT
+                        _CONCAT_PROXY="$_PPROTO://$_PUSER:$_PPASS@$_PIP:$_PPORT"
                     else
-                        _CONCAT_PROXY="$_PPROTO://$_PIP:$_PPORT
+                        _CONCAT_PROXY="$_PPROTO://$_PIP:$_PPORT"
                     fi
-                    sed "s/\_SPROXY\_/$_CONCAT_PROXY/g" -i $_TRANSOCKS_CONF
+                    sed "s|_SPROXY_|$_CONCAT_PROXY|g" -i $_TRANSOCKS_CONF
                     
                     ## SET TABLES:
                     IJUMP="TRANSOCKS"

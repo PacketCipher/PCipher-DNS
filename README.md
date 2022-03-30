@@ -40,7 +40,7 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 - Tor
 - Squid (incl. Certcreator for SSL-Bump Functionality)
 - Redsocks
-- Transocks
+- Transocks (Use this for HTTP Proxies)
 - Proxychains
 - Windscribe (Requires an account: https://windscribe.com/signup)
 
