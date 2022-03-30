@@ -1,0 +1,8 @@
+# listening address of transocks.
+listen = "0.0.0.0:4433"
+
+proxy_url = "_SPROXY_"
+
+[log]
+level = "info"               # critical", error, warning, info, debug
+format = "json"              # plain, logfmt, json

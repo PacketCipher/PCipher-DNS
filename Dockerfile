@@ -1,7 +1,18 @@
+### Build Stage
+FROM golang:1.18-alpine AS build-env
+
+WORKDIR /
+RUN apk --no-cache add git && \
+    git clone https://github.com/cybozu-go/transocks.git src && \
+    cd /src && go get github.com/cybozu-go/transocks/cmd/transocks && \
+    go build -o transocks ./cmd/transocks
+
+### Final Stage
 FROM ubuntu:20.04
 
 # Packages
-RUN apt-get update && apt-get install --yes curl iputils-ping net-tools iproute2 iptables git sniproxy dnsmasq redsocks
+COPY --from=build-env /src/transocks /usr/bin/
+RUN apt-get update && apt-get install --yes curl iputils-ping net-tools iproute2 iptables git sniproxy dnsmasq
 ADD . /etc/unblock-proxy
 RUN ln -s /etc/unblock-proxy/unblock-proxy.sh /usr/bin/unblock-proxy 
 

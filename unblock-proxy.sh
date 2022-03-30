@@ -41,6 +41,7 @@ _DNS_CONF=${_BASE_DIR}configs/dnsmasq.conf
 _TOR_CONF=${_BASE_DIR}configs/torrc
 _SQUID_CONF=${_BASE_DIR}configs/squid.conf
 _REDSOCKS_CONF=${_BASE_DIR}configs/redsocks.conf
+_TRANSOCKS_CONF=${_BASE_DIR}configs/transocks.toml
 _PCHAINS_CONF=${_BASE_DIR}configs/proxychains.conf
 _WS_COUNTRY=best
 
@@ -73,6 +74,7 @@ _usage()
     -t, --tor               Activates the TOR Engine.
     -s, --squid             Activates the Squid Engine.
     -r, --redsocks          Activates the RedSocks Engine.
+    -n, --transocks         Activates the Transocks Engine.
     -p, --proxychains       Activates the proxychains Engine.
     -w, --windscribe=       Activates the windscribe Engine.
                             (Optional set Country: --windscribe=US or -w US or without arguments!)
@@ -168,6 +170,20 @@ _run_redsocks()
         exit 114
     fi
 }
+
+_run_transocks()
+{
+    BIN_CHK=$(command -v transocks)
+      
+    if [[ $BIN_CHK ]]; then
+        $BIN_CHK -f $_TRANSOCKS_CONF
+    else
+        echo "[!!] Command $BIN_CHK not found!"
+        echo "Try to search/install like: apt-get install $BIN_CHK"
+        exit 114
+    fi
+}
+
 
 _run_proxychains()
 {
@@ -349,7 +365,7 @@ _set_ssh_socks()
 _kill_ngines()
 {
     #kill $(lsof -t -i:8383) #>/dev/null 2>&1
-    for PID in tor squid privoxy redsocks proxychains sniproxy dnsmasq; do
+    for PID in tor squid privoxy redsocks transocks proxychains sniproxy dnsmasq; do
         TP=$(ps -A -o pid,args | grep -E "\ $PID|\/$PID" | grep -v grep | awk '{print $1}')
         printf "\n[X] Killing process: $PID: "
         for I in $TP; do
@@ -446,6 +462,7 @@ _set_ngin_conf()
     _SQUID_CONF=${TMP_CONF}/squid.conf
     _PRIVOXY_CONF=${TMP_CONF}/privoxy.conf
     _REDSOCKS_CONF=${TMP_CONF}/redsocks.conf
+    _TRANSOCKS_CONF=${TMP_CONF}/transocks.toml
     _DNS_CONF=${TMP_CONF}/dnsmasq.conf
     _PCHAINS_CONF=${TMP_CONF}/proxychains.conf
 
@@ -501,8 +518,30 @@ _set_ngin_conf()
                     iptables -t nat -A REDSOCKS -d 192.168.0.0/16 -j RETURN
                     iptables -t nat -A REDSOCKS -d 224.0.0.0/4 -j RETURN
                     iptables -t nat -A REDSOCKS -d 240.0.0.0/4 -j RETURN
-                    iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 4433                                                     
+                    iptables -t nat -A REDSOCKS -p tcp -j REDIRECT --to-ports 4433                                                                         
                     ;;                                      
+            transocks)  
+                    _get_proxy
+                    if [[ -n $_PUSER && -n $_PPASS ]]; then
+                        _CONCAT_PROXY="$_PPROTO://$_PUSER:$_PPASS@$_PIP:$_PPORT
+                    else
+                        _CONCAT_PROXY="$_PPROTO://$_PIP:$_PPORT
+                    fi
+                    sed "s/\_SPROXY\_/$_CONCAT_PROXY/g" -i $_TRANSOCKS_CONF
+                    
+                    ## SET TABLES:
+                    IJUMP="TRANSOCKS"
+                    iptables -t nat -N TRANSOCKS
+                    iptables -t nat -A TRANSOCKS -d 0.0.0.0/8 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 10.0.0.0/8 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 127.0.0.0/8 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 169.254.0.0/16 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 172.16.0.0/12 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 192.168.0.0/16 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 224.0.0.0/4 -j RETURN
+                    iptables -t nat -A TRANSOCKS -d 240.0.0.0/4 -j RETURN
+                    iptables -t nat -A TRANSOCKS -p tcp -j REDIRECT --to-ports 4433                                                     
+                    ;;                                                                       
             proxychains)
                     if [[ $_SSH_SOCKS > 0 ]]; then 
                         _get_proxy                                     
@@ -540,7 +579,10 @@ _start_ngin()
                     ;;                                      
             redsocks)                                       
                     _run_redsocks                                                        
-                    ;;                                      
+                    ;;           
+            transocks)                                       
+                    _run_transocks                                                        
+                    ;;                                                                 
             proxychains)                                     
                     _run_proxychains                                                   
                     ;;
@@ -576,7 +618,7 @@ if [[ $? != 4 && $? != 1 ]]; then
     exit 13
 fi
 
-_getopt=$(getopt -o tsrpw:i:o:SWRCvhd --long tor,squid,redsocks,proxychains,windscribe::,in-if::,out-if::,ip-address::,ssh-socks,web-admin,reset,proxycheck,tunnelmode,version,help,debug -n $_PROG -- "$@")
+_getopt=$(getopt -o tsrpw:i:o:SWRCvhd --long tor,squid,redsocks,transocks,proxychains,windscribe::,in-if::,out-if::,ip-address::,ssh-socks,web-admin,reset,proxycheck,tunnelmode,version,help,debug -n $_PROG -- "$@")
 if [[ $? != 0 ]] ; then 
     echo "bad command line options" >&2 ; exit 14 ; 
 fi
@@ -602,6 +644,11 @@ while true; do
                     ;;
             -r|--redsocks)
                     _PROX_ENGINE="redsocks"
+                    shift
+                    continue 
+                    ;;
+            -n|--transocks)
+                    _PROX_ENGINE="transocks"
                     shift
                     continue 
                     ;;

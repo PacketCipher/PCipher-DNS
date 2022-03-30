@@ -185,6 +185,7 @@ Proxy Engines:
     Tor
     Squid (incl. Certcreator for SSL-Bump Functionality)
     Redsocks
+	Transocks
     Proxychains
 	
         </p>

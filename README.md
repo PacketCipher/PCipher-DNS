@@ -40,6 +40,7 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 - Tor
 - Squid (incl. Certcreator for SSL-Bump Functionality)
 - Redsocks
+- Transocks
 - Proxychains
 - Windscribe (Requires an account: https://windscribe.com/signup)
 
@@ -64,7 +65,7 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 
 ### Using Docker:
 
-docker run -it --cap-add=NET_ADMIN -p 80 -p 443 -p 53/udp -e UPSTREAM_DNS_SERVER=1.1.1.1 -e PROXY_DETAILS="http 10.20.30.40 8080" fireblackhat/dns-tunnel dns --redsocks --tunnelmode --ip-address="YOUR PUBLIC IP" --debug
+docker run -it --cap-add=NET_ADMIN -p 80 -p 443 -p 53/udp -e UPSTREAM_DNS_SERVER=1.1.1.1 -e PROXY_DETAILS="http 10.20.30.40 8080" fireblackhat/dns-tunnel dns --transocks --tunnelmode --ip-address="YOUR PUBLIC IP" --debug
 
 ### Manually:
 
@@ -121,6 +122,12 @@ cd ~/redsocks && make
 sudo ln -s ~/redsocks/redsocks /usr/bin/
 ```
 
+#### - transocks
+
+```
+go get -u github.com/cybozu-go/transocks/...
+```
+
 #### - proxychains
 
 ```
@@ -155,32 +162,35 @@ Usage: unblock-proxy.sh main-mode proxy-engine [options]>
 
   main-mode:
 
-	transparent             Activates the transparent routing-gw.
-	dns                     Activates the DNS Smart-Proxy.
+    transparent             Activates the transparent routing-gw.
+    dns                     Activates the DNS Smart-Proxy.
 
   proxy engines:
 
-	-t, --tor               Activates the TOR Engine.
-	-s, --squid             Activates the Squid Engine.
-	-r, --redsocks          Activates the RedSocks Engine.
-	-p, --proxychains       Activates the proxychains Engine.
-	-w, --windscribe=       Activates the windscribe Engine.
-                                (Optional set Country: --windscribe=US or -w US or without arguments!)
+    -t, --tor               Activates the TOR Engine.
+    -s, --squid             Activates the Squid Engine.
+    -r, --redsocks          Activates the RedSocks Engine.
+    -n, --transocks         Activates the Transocks Engine.
+    -p, --proxychains       Activates the proxychains Engine.
+    -w, --windscribe=       Activates the windscribe Engine.
+                            (Optional set Country: --windscribe=US or -w US or without arguments!)
 
   options:
 
-	-i, --in-if=            Sets the in-interface Device.
-	-o, --out-if=           Sets the out-interface Device.
-	-S, --ssh-socks         Set own Server as Parent Socks-Proxy over SSH-tunnel.
-                                (Can't be use with tor-Engine!)
-	-w, --web-admin         Starts a small Webserver-Backend at Port 8383
-                                (Requires php framework >=5.4!)
-	-R, --reset             Resets all the IPTABLES and MASQ Entries.
-	-C, --proxycheck        Just scans/checks the Proxies in (/opt/unblock-proxy/proxies.lst).
+    -i, --in-if=            Sets the in-interface Device.
+    -o, --out-if=           Sets the out-interface Device.
+    --ip-address=           Sets the IP-Address manually.
+    -S, --ssh-socks         Set own Server as Parent Socks-Proxy over SSH-tunnel.
+                            (Can't be use with tor-Engine!)
+    -W, --web-admin         Starts a small Webserver-Backend at Port 8383
+                            (Requires php framework >=5.4!)
+    -R, --reset             Resets all the IPTABLES and MASQ Entries.
+    -C, --proxycheck        Just scans/checks the Proxies in ($_PROXY_FILE).
+    --tunnelmode            Tunnel all the traffic through proxy. (Works only with DNS Smart-Proxy)
 
-	-d, --debug             Show debug-verbose messages into the system log.
-	-v, --version           Prints script-version.
-	-h, --help              Print this help message.
+    -d, --debug             Show debug-verbose messages into the system log.
+    -v, --version           Prints script-version.
+    -h, --help              Print this help message.
 
 ```
 
