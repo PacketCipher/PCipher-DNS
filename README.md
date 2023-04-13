@@ -65,7 +65,7 @@ This Script uses a List of (Free)-Proxies and Domains that allows you to set up 
 
 ### Using Docker:
 
-docker run -it --cap-add=NET_ADMIN -p 80:80 -p 443:443 -p 53:53 -e UPSTREAM_DNS_SERVER=1.1.1.1 -e PROXY_DETAILS="socks5 192.168.1.50 10808" fireblackhat/dns-tunnel dns --transocks --tunnelmode --ip-address="192.168.1.50" --debug
+docker run -it --cap-add=NET_ADMIN -p 80:80 -p 443:443 -p 53:53/udp -e UPSTREAM_DNS_SERVER=1.1.1.1 -e PROXY_DETAILS="socks5 192.168.1.50 10808" fireblackhat/dns-tunnel dns --transocks --tunnelmode --ip-address="192.168.1.50" --debug
 
 ### Manually:
 
